@@ -12,8 +12,11 @@ CREATE TABLE customers (
 DISTRIBUTED BY (customer_id)  -- Distribute data across segments
 PARTITION BY (country)  -- Partitioning the table by country for efficient query;
 
--- speed up querying customer 
+-- speed up querying customer_email 
 CREATE UNIQUE INDEX idx_customers_email ON customers(email_address);
+
+-- speed up querying customer_id 
+CREATE UNIQUE INDEX idx_customers_id ON customers(customer_id);
 
 
 
@@ -69,6 +72,9 @@ DISTRIBUTED BY (transaction_id)  -- Distribution data across segments
 PARTITION BY RANGE (purchase_date) (
     START ('2010-01-01') END ('2030-01-01') EVERY (INTERVAL '1 month')  
 );
+-- speed up purchase date based searches
+CREATE INDEX idx_purchase_date ON sales_transactions(purchase_date );
+
 -- speed up customer-based searches
 CREATE INDEX idx_customer_id ON sales_transactions(customer_id);
 
@@ -102,12 +108,12 @@ PARTITION BY RANGE (shipping_date)
     START ('2010-01-01') END ('2030-01-01') EVERY (INTERVAL '1 month')  
 );
 
+-- speed up transaction_based searches
+CREATE INDEX idx_transactions_id ON shipping_details(transaction_id);
+
 -- speed up date-based queries
 CREATE INDEX idx_shipping_details_date ON shipping_details(shipping_date);
 
-
--- speed up city searches (ex. for couriers)
-CREATE INDEX idx_shipping_details_city ON shipping_details(city);
 
 
 

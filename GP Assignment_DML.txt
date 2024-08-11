@@ -1,0 +1,42 @@
+
+
+-- =============================== Task 1 ====================================================
+-- =============== Calculate monthly sales amount and transactions count =====================
+---- the fact that sales_transactions table is properly idexed and below qurry will work efficiently
+
+SELECT
+	SUM(total_amount) AS monthly_sales_amount,
+	COUNT(transaction_id) AS monthly_transactions_count,
+        DATE_TRUNC('month', purchase_date) AS sales_month,  
+    FROM
+        sales_transactions
+    GROUP BY
+        DATE_TRUNC('month', purchase_date)
+
+
+
+-- ======================= Task 2 =======================================
+-- =============== Calculate 3 month moving average =====================
+-- here we assume that every month will have sales and transactions data present and moving average will be calculated properly
+-- the fact that sales_transactions table is properly idexed, below qurry  with window functions will work efficiently.
+
+WITH monthly_sales AS (
+    SELECT
+	SUM(total_amount) AS monthly_sales_amount,
+        DATE_TRUNC('month', purchase_date) AS sales_month,  
+    FROM
+        sales_transactions
+    GROUP BY
+        DATE_TRUNC('month', purchase_date)  
+)
+SELECT
+    sales_month,
+    AVG(total_monthly_sales) OVER (
+        ORDER BY sales_month
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    ) AS three_month_moving_avg  
+FROM
+    monthly_sales
+ORDER BY
+    sales_month;
+
