@@ -1,0 +1,116 @@
+
+-- ========== Customers table creation ==============
+
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,  -- Unique internal id
+    customer_name VARCHAR(255) NOT NULL,  -- Customer's name
+    email_address VARCHAR(255) UNIQUE NOT NULL,  -- Customer's email address
+    country VARCHAR(100) NOT NULL,  -- Customer's country
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- creation timestamp
+    subscribtion_status BOOLEAN -- control subscribe/unsubscribe 
+)
+DISTRIBUTED BY (customer_id)  -- Distribute data across segments
+PARTITION BY (country)  -- Partitioning the table by country for efficient query;
+
+-- speed up querying customer 
+CREATE UNIQUE INDEX idx_customers_email ON customers(email_address);
+
+
+
+
+
+
+
+
+-- ========== Products table creation ==============
+
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,  -- Unique internal ID
+    product_name VARCHAR(255) NOT NULL,  -- Name of the product
+    price DECIMAL(10, 2) NOT NULL,  -- Price of the product
+    category VARCHAR(100) NOT NULL,  -- Category of the product
+    )
+DISTRIBUTED BY (product_id)  -- Distribute data  across segments
+PARTITION BY (category)  -- Partitioning the table by category for efficient query
+;
+
+-- speed up searches by product name
+CREATE INDEX idx_products_name ON products(product_name);
+
+-- speed up category-based searches
+CREATE INDEX idx_products_category ON products(category);
+
+
+
+
+
+
+
+
+
+
+-- ========== Sales transactions table creation ============== 
+
+CREATE TABLE sales_transactions (
+    transaction_id SERIAL PRIMARY KEY, -- Unique internal ID  
+    customer_id INT NOT NULL, -- buyer 
+    product_id INT NOT NULL,  -- Purchased product 
+    purchase_date DATE NOT NULL, --Purchase date 
+    quantity_purchased INT NOT NULL,  -- Quantity 
+    transaction_amount DECIMAL(10, 2) NOT NULL,  -- Total amount 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Record creation timestamp
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  -- Record last update timestamp
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+)
+DISTRIBUTED BY (transaction_id)  -- Distribution data across segments
+
+-- Partitioning by purchase_date monthly. Suitable for archiving old transactions as well
+PARTITION BY RANGE (purchase_date) (
+    START ('2010-01-01') END ('2030-01-01') EVERY (INTERVAL '1 month')  
+);
+-- speed up customer-based searches
+CREATE INDEX idx_customer_id ON sales_transactions(customer_id);
+
+-- speed up product-based searches
+CREATE INDEX idx_product_id ON sales_transactions(product_id);
+
+
+
+
+
+
+-- ========== Shipping details table creation ============== 
+
+CREATE TABLE shipping_details (
+    tracking_number VARCHAR(100) PRIMARY KEY,  -- Tracking number 
+    transaction_id INT NOT NULL,  -- nonunique, because one purchase can be shipped as several parts. Foreign key referencing the sales_transactions table
+    shipping_date DATE NOT NULL,  -- Date when the product was shipped
+    shipping_address VARCHAR(255) NOT NULL,  -- Shipping address
+    city VARCHAR(100) NOT NULL,  -- City for the shipping address
+    country VARCHAR(100) NOT NULL,  -- Country for the shipping address
+    standard_shipping BOOL,  -- (Standard - 1, Express- 0)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Record creation timestamp
+    FOREIGN KEY (transaction_id) REFERENCES sales_transactions(transaction_id)  -- Foreign key constraint
+)
+
+DISTRIBUTED BY (transaction_id)  -- Distribute data across segments
+
+--Partitioning by purchase_date monthly. Suitable for archiving old shipments
+PARTITION BY RANGE (shipping_date)  
+(
+    START ('2010-01-01') END ('2030-01-01') EVERY (INTERVAL '1 month')  
+);
+
+-- speed up date-based queries
+CREATE INDEX idx_shipping_details_date ON shipping_details(shipping_date);
+
+
+-- speed up city searches (ex. for couriers)
+CREATE INDEX idx_shipping_details_city ON shipping_details(city);
+
+
+
+
+
+
